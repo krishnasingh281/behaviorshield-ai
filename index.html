@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BehaviorShield — Live Auth Demo</title>
+<style>
+:root{
+  --navy:#060D1F;--navy-card:#111C38;--teal:#00C9A7;
+  --muted:#8899BB;--border:rgba(255,255,255,0.08);
+  --red:#EF4444;--amber:#F59E0B;--green:#10B981;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--navy);color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.shell{width:100%;max-width:640px;display:flex;flex-direction:column;gap:16px}
+
+.brand{display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--teal),#3B82F6);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2}
+.brand-text{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.user-id{font-size:11px;color:var(--muted);font-family:monospace;margin-left:auto}
+
+.card{background:var(--navy-card);border:1px solid var(--border);border-radius:16px;padding:24px}
+.phase-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.phase-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.phase-1-label{color:var(--amber)}
+.phase-2-label{color:var(--teal)}
+
+input[type=text]{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:16px;color:#fff;outline:none;font-family:inherit;transition:border-color .2s;margin-bottom:8px}
+input[type=text]:focus{border-color:var(--teal)}
+input[type=text]::placeholder{color:rgba(136,153,187,0.5)}
+input[type=text]:disabled{opacity:.4;cursor:not-allowed}
+
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#060D1F;font-size:14px;font-weight:700;padding:12px 22px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;font-family:inherit;margin-top:8px}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.event-bar{height:3px;background:rgba(255,255,255,0.07);border-radius:2px;margin:8px 0 4px;overflow:hidden}
+.event-bar-fill{height:3px;background:var(--teal);border-radius:2px;transition:width .3s ease;width:0%}
+.event-hint{font-size:11px;color:var(--muted)}
+
+/* Score ring area */
+.score-area{display:grid;grid-template-columns:110px 1fr;gap:20px;align-items:center;margin-bottom:20px}
+.ring-wrap{position:relative;width:100px;height:100px}
+.ring-wrap svg{position:absolute;top:0;left:0}
+.ring-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.ring-num{font-size:28px;font-weight:800;line-height:1;transition:color .5s}
+.ring-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.verdict-pill{display:inline-block;font-size:11px;font-weight:600;padding:4px 12px;border-radius:99px;margin-bottom:8px}
+.v-clear   {background:rgba(16,185,129,.15);color:#6EE7B7;border:1px solid rgba(16,185,129,.25)}
+.v-step    {background:rgba(245,158,11,.15);color:#FCD34D;border:1px solid rgba(245,158,11,.25)}
+.v-limit   {background:rgba(239,68,68,.12);color:#FCA5A5;border:1px solid rgba(239,68,68,.25)}
+.v-critical{background:rgba(239,68,68,.2);color:#FCA5A5;border:1px solid rgba(239,68,68,.4);animation:flash 1s ease infinite}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.4}}
+.v-waiting {background:rgba(136,153,187,.1);color:var(--muted);border:1px solid rgba(136,153,187,.2)}
+.verdict-msg{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* Signal bars */
+.signals{display:flex;flex-direction:column;gap:10px;padding-top:16px;border-top:1px solid var(--border)}
+.sig-row{display:flex;align-items:center;gap:10px}
+.sig-icon{font-size:13px;width:22px;text-align:center;flex-shrink:0}
+.sig-label{font-size:11px;color:var(--muted);width:110px;flex-shrink:0}
+.bar-bg{flex:1;height:4px;background:rgba(255,255,255,0.07);border-radius:2px}
+.bar-fill{height:4px;border-radius:2px;transition:width .7s ease,background .5s;width:50%}
+.sig-val{font-size:11px;color:var(--muted);width:70px;text-align:right;font-family:monospace}
+
+/* Z-score detail */
+.z-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.z-card{background:rgba(255,255,255,0.03);border:0.5px solid var(--border);border-radius:8px;padding:8px 10px}
+.z-name{font-size:10px;color:var(--muted);margin-bottom:2px}
+.z-val{font-size:14px;font-weight:600;font-family:monospace}
+
+/* Live typing indicator */
+.typing-indicator{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:12px}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-live{background:var(--teal);animation:pulse 1.5s ease infinite}
+.dot-off{background:var(--muted)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+
+/* Log */
+.log-wrap{background:#000;border:1px solid var(--border);border-radius:12px;padding:14px;font-family:monospace;font-size:11px;max-height:160px;overflow-y:auto}
+.ll{padding:1px 0;line-height:1.7}
+.lok{color:var(--teal)}.lwarn{color:var(--amber)}.lerr{color:var(--red)}.linfo{color:var(--muted)}
+
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="brand">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z"/></svg>
+    </div>
+    <span class="brand-text">BehaviorShield</span>
+    <span class="user-id" id="uid-label">—</span>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="card" id="phase1">
+    <div class="phase-label phase-1-label">Phase 1 — Enrollment</div>
+    <div class="phase-desc">Type anything naturally in the box below — a sentence, your name, anything. The AI will learn your typing rhythm. Then click Enroll.</div>
+    <input type="text" id="enroll-input" placeholder="Type here naturally..." autocomplete="off"/>
+    <div class="event-bar"><div class="event-bar-fill" id="event-bar-fill"></div></div>
+    <div class="event-hint" id="event-hint">Type at least 8 keystrokes to enable enrollment</div>
+    <button class="btn" id="enroll-btn" onclick="doEnroll()" disabled>Enroll my typing style</button>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="card hidden" id="phase2">
+    <div class="typing-indicator">
+      <div class="dot dot-live" id="ws-dot"></div>
+      <span id="ws-label">Continuous authentication active — scoring every 2s</span>
+    </div>
+
+    <div class="score-area">
+      <div class="ring-wrap">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+          <circle id="ring-arc" cx="50" cy="50" r="38" fill="none" stroke="#10B981"
+            stroke-width="8" stroke-linecap="round"
+            stroke-dasharray="238.76" stroke-dashoffset="59.69"
+            transform="rotate(-90 50 50)"
+            style="transition:stroke-dashoffset .9s ease,stroke .5s ease"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-num" id="ring-num" style="color:#10B981">75</div>
+          <div class="ring-sub">trust</div>
+        </div>
+      </div>
+      <div>
+        <div class="verdict-pill v-waiting" id="verdict-pill">WAITING</div>
+        <div class="verdict-msg" id="verdict-msg">Keep typing — first score in ~2 seconds</div>
+      </div>
+    </div>
+
+    <input type="text" id="auth-input" placeholder="Keep typing — anything at all..." autocomplete="off"/>
+
+    <div class="signals">
+      <div class="sig-row">
+        <span class="sig-icon">⌨️</span>
+        <span class="sig-label">Dwell time</span>
+        <div class="bar-bg"><div class="bar-fill" id="b-dwell" style="background:var(--teal)"></div></div>
+        <span class="sig-val" id="v-dwell">—</span>
+      </div>
+      <div class="sig-row">
+        <span class="sig-icon">⏱</span>
+        <span class="sig-label">Flight time</span>
+        <div class="bar-bg"><div class="bar-fill" id="b-flight" style="background:#3B82F6"></div></div>
+        <span class="sig-val" id="v-flight">—</span>
+      </div>
+      <div class="sig-row">
+        <span class="sig-icon">〰️</span>
+        <span class="sig-label">Dwell variance</span>
+        <div class="bar-bg"><div class="bar-fill" id="b-std" style="background:var(--amber)"></div></div>
+        <span class="sig-val" id="v-std">—</span>
+      </div>
+    </div>
+
+    <!-- Z-score breakdown -->
+    <div class="z-grid" id="z-grid" style="display:none">
+      <div class="z-card"><div class="z-name">mean_dwell z-score</div><div class="z-val" id="z-dwell">—</div></div>
+      <div class="z-card"><div class="z-name">std_dwell z-score</div><div class="z-val" id="z-std">—</div></div>
+      <div class="z-card"><div class="z-name">mean_flight z-score</div><div class="z-val" id="z-flight">—</div></div>
+      <div class="z-card"><div class="z-name">behavior confidence</div><div class="z-val" id="z-conf">—</div></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-wrap" id="log">
+    <div class="ll linfo">[ system ] BehaviorShield ready. Waiting for enrollment...</div>
+  </div>
+
+</div>
+<script>
+// ── Session ID ──────────────────────────────────────────────────────────
+const USER_ID = "user_" + Math.random().toString(36).substr(2, 9);
+document.getElementById('uid-label').textContent = USER_ID;
+
+// ── State ───────────────────────────────────────────────────────────────
+let events = [];
+let ws = null;
+let wsInterval = null;
+let currentScore = 75;
+const CIRC = 238.76;
+
+// ── Logging ─────────────────────────────────────────────────────────────
+function log(msg, type='info') {
+  const box = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = 'll l' + type;
+  const t = new Date().toLocaleTimeString('en',{hour12:false});
+  d.textContent = `[ ${t} ] ${msg}`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  // keep max 60 lines
+  while (box.children.length > 60) box.removeChild(box.firstChild);
+}
+
+// ── Event capture ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  events.push({type:'key_down', target:e.key, timestamp:Date.now()});
+  updateEnrollProgress();
+});
+document.addEventListener('keyup', e => {
+  events.push({type:'key_up', target:e.key, timestamp:Date.now()});
+});
+document.addEventListener('mousedown', e => {
+  events.push({type:'touch_start', target:'screen', timestamp:Date.now(), x:e.clientX, y:e.clientY});
+});
+document.addEventListener('mouseup', e => {
+  events.push({type:'touch_end', target:'screen', timestamp:Date.now(), x:e.clientX, y:e.clientY});
+});
+
+// ── Enrollment progress bar ──────────────────────────────────────────────
+function updateEnrollProgress() {
+  const keydowns = events.filter(e => e.type === 'key_down').length;
+  const pct = Math.min(100, (keydowns / 10) * 100);
+  document.getElementById('event-bar-fill').style.width = pct + '%';
+  if (keydowns >= 8) {
+    document.getElementById('enroll-btn').disabled = false;
+    document.getElementById('event-hint').textContent = `${keydowns} keystrokes captured — ready to enroll`;
+    document.getElementById('event-hint').style.color = 'var(--teal)';
+  } else {
+    document.getElementById('event-hint').textContent = `${keydowns}/10 keystrokes captured`;
+  }
+}
+
+// ── PHASE 1: Enroll ──────────────────────────────────────────────────────
+async function doEnroll() {
+  const btn = document.getElementById('enroll-btn');
+  btn.disabled = true;
+  btn.textContent = 'Enrolling...';
+  log(`Sending ${events.length} events for enrollment...`, 'info');
+
+  try {
+    const res = await fetch(`http://127.0.0.1:8000/api/enroll/${USER_ID}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({events: [...events]})
+    });
+    const data = await res.json();
+    if (data.status === 'SUCCESS') {
+      log('Baseline trained and saved.', 'ok');
+      // Clear events — start fresh for phase 2
+      events = [];
+      switchToPhase2();
+    } else {
+      log('Enrollment error: ' + data.message, 'err');
+      btn.disabled = false;
+      btn.textContent = 'Enroll my typing style';
+    }
+  } catch(err) {
+    log('Cannot reach server at :8000 — is uvicorn running?', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Enroll my typing style';
+  }
+}
+
+// ── Switch to phase 2 ────────────────────────────────────────────────────
+function switchToPhase2() {
+  document.getElementById('phase1').classList.add('hidden');
+  document.getElementById('phase2').classList.remove('hidden');
+  document.getElementById('auth-input').focus();
+  openWebSocket();
+}
+
+// ── PHASE 2: WebSocket ───────────────────────────────────────────────────
+function openWebSocket() {
+  if (ws) ws.close();
+  ws = new WebSocket(`ws://127.0.0.1:8000/ws/auth/${USER_ID}`);
+
+  ws.onopen = () => {
+    log('WebSocket open — continuous auth started.', 'ok');
+    setDot(true);
+    // Send events every 2 seconds
+    wsInterval = setInterval(sendFrame, 2000);
+  };
+
+  ws.onmessage = e => {
+    const r = JSON.parse(e.data);
+
+    // CONNECTED handshake — just log it, don't update UI
+    if (r.status === 'CONNECTED') {
+      log('Engine handshake: ' + r.message, 'ok');
+      return;
+    }
+    // WAITING — not enough events yet
+    if (r.status === 'WAITING') {
+      log('Waiting for more keystrokes...', 'info');
+      return;
+    }
+    // FORCE LOGOUT from server
+    if (r.action === 'FORCE_LOGOUT') {
+      log('FORCE LOGOUT — ' + r.reason, 'err');
+      doLockdown();
+      return;
+    }
+    // Normal PROCESSED frame
+    if (r.status === 'PROCESSED') {
+      log(`risk=${r.risk_score} | conf=${r.behavior_confidence}% | ${r.verdict}`,
+          r.verdict === 'CLEAR' ? 'ok' : r.verdict === 'STEP_UP_AUTH' ? 'warn' : 'err');
+      updateRing(r);
+      updateSignals(r);
+      updateZScores(r);
+      if (r.verdict === 'CRITICAL_ANOMALY_TERMINATE_SESSION') doLockdown();
+    }
+  };
+
+  ws.onclose = e => {
+    setDot(false);
+    clearInterval(wsInterval);
+    // Don't reconnect if we intentionally closed (4403 = security lockdown)
+    if (e.code !== 4403 && e.code !== 1000) {
+      log('WebSocket closed — reconnecting in 3s...', 'warn');
+      setTimeout(openWebSocket, 3000);
+    }
+  };
+
+  ws.onerror = () => log('WebSocket error. Check uvicorn is running.', 'err');
+}
+
+// ── Send a frame ─────────────────────────────────────────────────────────
+function sendFrame() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  // Need at least 4 events (2 keydown+keyup pairs) to extract features
+  const snap = [...events];
+  events = []; // clear buffer so next window starts fresh
+  if (snap.length < 4) return;
+
+  ws.send(JSON.stringify({
+    events: snap,
+    context: {
+      km_from_last_login: 0,
+      hours_since_last_login: 1,
+      is_trusted_device: true
+    }
+  }));
+}
+
+// ── Ring update ──────────────────────────────────────────────────────────
+function updateRing(r) {
+  const trust = Math.round(100 - r.risk_score);
+  const arc = document.getElementById('ring-arc');
+  const num = document.getElementById('ring-num');
+  const color = trust >= 65 ? '#10B981' : trust >= 40 ? '#F59E0B' : '#EF4444';
+
+  arc.style.strokeDashoffset = CIRC * (1 - trust / 100);
+  arc.style.stroke = color;
+  num.style.color  = color;
+
+  // Smooth number animation
+  const from = currentScore;
+  currentScore = trust;
+  const start = performance.now();
+  const dur = 700;
+  (function step(now) {
+    const p = Math.min((now - start) / dur, 1);
+    num.textContent = Math.round(from + (trust - from) * p);
+    if (p < 1) requestAnimationFrame(step);
+  })(performance.now());
+
+  // Verdict pill
+  const pill = document.getElementById('verdict-pill');
+  const msg  = document.getElementById('verdict-msg');
+  const map  = {
+    'CLEAR':                              {cls:'v-clear',  txt:'All signals match your profile. Full access granted.'},
+    'STEP_UP_AUTH':                       {cls:'v-step',   txt:'Mild anomaly. An OTP step-up would be triggered.'},
+    'LIMIT_ACCESS':                       {cls:'v-limit',  txt:'Significant anomaly. Transactions would be read-only.'},
+    'CRITICAL_ANOMALY_TERMINATE_SESSION': {cls:'v-critical',txt:'CRITICAL — Session terminated. Behavioral mismatch.'},
+  };
+  const v = map[r.verdict] || {cls:'v-waiting', txt: r.verdict};
+  pill.className = 'verdict-pill ' + v.cls;
+  pill.textContent = r.verdict.replace('_',' ').replace('_',' ');
+  msg.textContent = v.txt;
+}
+
+// ── Signal bars ───────────────────────────────────────────────────────────
+function updateSignals(r) {
+  const m = r.metrics_computed || {};
+  const z = r.z_scores || {};
+
+  // Convert Z-score (0=good, 3+=bad) to a 0-100% match bar
+  function zToMatch(z) { return Math.max(0, Math.min(100, 100 - (z / 3) * 100)); }
+
+  if (z.mean_dwell !== undefined) {
+    const pct = zToMatch(z.mean_dwell);
+    setBar('b-dwell','v-dwell', pct, (m.mean_dwell||0).toFixed(0)+'ms');
+  }
+  if (z.mean_flight !== undefined) {
+    const pct = zToMatch(z.mean_flight);
+    setBar('b-flight','v-flight', pct, (m.mean_flight||0).toFixed(0)+'ms');
+  }
+  if (z.std_dwell !== undefined) {
+    const pct = zToMatch(z.std_dwell);
+    setBar('b-std','v-std', pct, (m.std_dwell||0).toFixed(0)+'ms σ');
+  }
+}
+
+function setBar(barId, valId, pct, label) {
+  const bar = document.getElementById(barId);
+  bar.style.width = pct + '%';
+  bar.style.background = pct >= 70 ? 'var(--teal)' : pct >= 40 ? 'var(--amber)' : 'var(--red)';
+  document.getElementById(valId).textContent = label;
+}
+
+// ── Z-score detail cards ──────────────────────────────────────────────────
+function updateZScores(r) {
+  const z = r.z_scores || {};
+  const grid = document.getElementById('z-grid');
+  grid.style.display = 'grid';
+  setZCard('z-dwell',  z.mean_dwell);
+  setZCard('z-std',    z.std_dwell);
+  setZCard('z-flight', z.mean_flight);
+  document.getElementById('z-conf').textContent = (r.behavior_confidence||0).toFixed(1) + '%';
+  document.getElementById('z-conf').style.color = r.behavior_confidence > 70 ? 'var(--teal)' : r.behavior_confidence > 40 ? 'var(--amber)' : 'var(--red)';
+}
+
+function setZCard(id, val) {
+  const el = document.getElementById(id);
+  if (val === undefined) return;
+  el.textContent = val.toFixed(2);
+  el.style.color = val < 1 ? 'var(--teal)' : val < 2.5 ? 'var(--amber)' : 'var(--red)';
+}
+
+// ── Lockdown ──────────────────────────────────────────────────────────────
+function doLockdown() {
+  clearInterval(wsInterval);
+  setDot(false);
+  document.getElementById('auth-input').disabled = true;
+  document.getElementById('ws-label').textContent = 'Session locked — refresh to start a new session';
+  if (ws) ws.close(1000);
+}
+
+function setDot(live) {
+  const d = document.getElementById('ws-dot');
+  d.className = 'dot ' + (live ? 'dot-live' : 'dot-off');
+}
+</script>
+</body>
+</html>
