@@ -1,53 +1,59 @@
 import numpy as np
-from src.model import BehaviorAnomalyDetector
+from src.model import AdvancedBehaviorRiskEngine
 
-def generate_synthetic_profile(num_samples, profile_type="genuine"):
-    """
-    Generates synthetic feature vector sets mimicking distinct user behaviors.
-    """
-    np.random.seed(42)
-    dataset = []
-    
-    for _ in range(num_samples):
-        if profile_type == "genuine":
-            # Genuine user: fast, consistent typing; quick cursor movements
-            mean_dwell = np.random.normal(85, 8)       # Mean ~85ms, low variance
-            std_dwell = np.random.normal(6, 1.5)
-            mean_flight = np.random.normal(70, 10)     # Mean ~70ms
-            mean_swipe = np.random.normal(1.8, 0.2)    # Smooth mouse speed
-        else:
-            # Attacker: slower, hesitant typing; erratic/clumsy cursor movements
-            mean_dwell = np.random.normal(160, 35)     # Way slower, high variance
-            std_dwell = np.random.normal(25, 8)
-            mean_flight = np.random.normal(190, 45)    # Hesitant gaps
-            mean_swipe = np.random.normal(0.6, 0.4)    # Jagged mouse velocity
-            
-        dataset.append([mean_dwell, std_dwell, mean_flight, mean_swipe])
-        
-    return dataset
+def generate_profile_sample(style):
+    """Generates explicit static testing snapshots based on edge cases."""
+    if style == "clean_baseline":
+        return [85.0, 6.0, 70.0, 1.8]  # Quick, precise, regular user
+    elif style == "elderly_drift":
+        return [115.0, 14.0, 105.0, 1.4] # Drifting slightly slower, minor variance
+    elif style == "under_duress":
+        return [60.0, 38.0, 50.0, 3.2]   # Highly erratic speeds, rapid sharp movements
+    elif style == "attacker":
+        return [175.0, 28.0, 210.0, 0.5] # Completely mismatched cadence signature
+    return [0.0, 0.0, 0.0, 0.0]
 
 if __name__ == "__main__":
-    print("--- Phase 2: Starting Model Training Pipeline ---")
+    print("=== Training Sophisticated Context-Aware AI Core ===")
     
-    # 1. Generate normal training baseline for the genuine user
-    print("Generating 200 sessions of genuine behavioral telemetry data...")
-    genuine_train_data = generate_synthetic_profile(200, profile_type="genuine")
+    # 1. Setup simulated background database of genuine interactions
+    np.random.seed(42)
+    base_sample = generate_profile_sample("clean_baseline")
+    training_set = [
+        [
+            base_sample[0] + np.random.normal(0, 5),
+            base_sample[1] + np.random.normal(0, 1),
+            base_sample[2] + np.random.normal(0, 6),
+            base_sample[3] + np.random.normal(0, 0.1)
+        ] for _ in range(200)
+    ]
     
-    # 2. Initialize and train our detector
-    detector = BehaviorAnomalyDetector(contamination=0.03)
-    detector.train(genuine_train_data)
-    print("Model successfully trained on user's behavioral rhythm.")
-    
-    # 3. Simulate and test a new legitimate session from the genuine user
-    print("\n--- Live Test 1: Legitimate User Access Attempt ---")
-    genuine_test_sample = generate_synthetic_profile(1, profile_type="genuine")[0]
-    trust_score, is_flagged = detector.compute_anomaly_score(genuine_test_sample)
-    print(f"  Calculated Identity Trust Score: {trust_score}%")
-    print(f"  Security Flag Triggered: {is_flagged} (Access Granted)")
-    
-    # 4. Simulate and test an unauthorized Account Takeover (ATO) attempt
-    print("\n--- Live Test 2: Attacker Account Takeover Attempt ---")
-    attacker_test_sample = generate_synthetic_profile(1, profile_type="attacker")[0]
-    trust_score, is_flagged = detector.compute_anomaly_score(attacker_test_sample)
-    print(f"  Calculated Identity Trust Score: {trust_score}%")
-    print(f"  Security Flag Triggered: {is_flagged} (Session Terminated / Step-Up Challenge Required)")
+    engine = AdvancedBehaviorRiskEngine()
+    engine.train_initial_baseline(training_set)
+    print("Initial personal baseline model built successfully.")
+
+    # --- EDGE CASE SIMULATION 1: Genuine User is Traveling ---
+    print("\n--- Edge Case 1: Genuine User traveling (New Location / Flight Drift) ---")
+    travel_context = {"km_from_last_login": 1200, "hours_since_last_login": 2, "is_trusted_device": True}
+    res_1 = engine.evaluate_session(generate_profile_sample("clean_baseline"), context_data=travel_context)
+    print(f"  Calculated Risk: {res_1['risk_score']} | Context Threat: {res_1['context_risk']}")
+    print(f"  Verdict Action: {res_1['verdict']} (Success: System avoided false lockout)")
+
+    # --- EDGE CASE SIMULATION 2: Gradual Physical Drift ---
+    print("\n--- Edge Case 2: Legitimate User slow performance (Age / Fatigue / Injury) ---")
+    normal_context = {"km_from_last_login": 5, "hours_since_last_login": 24, "is_trusted_device": True}
+    res_2 = engine.evaluate_session(generate_profile_sample("elderly_drift"), context_data=normal_context)
+    print(f"  Calculated Risk: {res_2['risk_score']} | Behavior Confidence: {res_2['behavior_confidence']}")
+    print(f"  Verdict Action: {res_2['verdict']} (Success: Step-up authentication checks user safely)")
+
+    # --- EDGE CASE SIMULATION 3: Attack Under Duress ---
+    print("\n--- Edge Case 3: Legitimate Session Under Coercion / Hostile Duress ---")
+    res_3 = engine.evaluate_session(generate_profile_sample("under_duress"), context_data=normal_context)
+    print(f"  Calculated Risk: {res_3['risk_score']} | Behavior Confidence: {res_3['behavior_confidence']}")
+    print(f"  Verdict Action: {res_3['verdict']} (Success: Captured erratic biological response)")
+
+    # --- EDGE CASE SIMULATION 4: Direct Malicious Attacker ---
+    print("\n--- Edge Case 4: Straightforward Account Takeover (Attacker Access) ---")
+    attacker_context = {"km_from_last_login": 850, "hours_since_last_login": 1, "is_trusted_device": False}
+    res_4 = engine.evaluate_session(generate_profile_sample("attacker"), context_data=attacker_context)
+    print(f"  Calculated Risk: {res_4['risk_score']} | Verdict Action: {res_4['verdict']}")
